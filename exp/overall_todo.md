@@ -19,14 +19,19 @@
 | **P0** | feature1 | 环境就绪 + 最小布料 smoke | `design/feature1_env_smoke.md` | `part1-exp.md` | **✅ 完成** |
 | **P0** | feature2 | 布料 + compliance 物性标定 | `design/feature2_cloth_asset.md` | `part2-exp.md` | **✅ 完成** |
 | **P1** | feature3 | 机器人 + 夹爪抓布接触验证 | `design/feature3_grasp_contact.md` | `part3-exp.md` | **✅ 完成** |
-| **P1** | feature4 | 粒子状态录制/回放对接 LeRobot | `design/feature4_state_io.md` | `part4-exp.md` | 待开始 |
-| **P2** | feature5 | 布料数据生成流水线 | `design/feature5_datagen.md` | `part5-exp.md` | 待开始 |
-| **P2** | feature6 | 闭环评估 | `design/feature6_eval.md` | `part6-exp.md` | 待开始 |
+| **P1** | feature4 | 真实衣物资产 + 自碰撞稳定性 + 抓取迁移 | `design/feature4_garment_asset.md` | `part4-exp.md` | **进行中** |
+| **P1** | feature5 | 衣物操作任务（挂置/对折）+ 成功率指标 | `design/feature5_garment_task.md` | `part5-exp.md` | 待开始 |
+| **P2** | feature6 | 状态+观测录制 → LeRobot 数据集 | `design/feature6_state_io.md` | `part6-exp.md` | 待开始 |
+| **P2** | feature7 | datagen 批量化 + 闭环评估 | `design/feature7_datagen_eval.md` | `part7-exp.md` | 待开始 |
 
-排序理由：
-- P0 先解决「能不能在 RDNA4 上稳定跑出一块行为合理的布」——后续一切的地基，风险最高、杠杆最大。
-- P1 解决「机器人能不能操作布 + 状态能不能进数据集」——具身操作核心闭环；接触稳定性是最大不确定项。
-- P2 把单点能力扩成数据/评估流水线，依赖 P0/P1 成立。
+排序理由（聚焦衣物，已剔除 SPH/流体）：
+- P0 地基：RDNA4 上稳定跑出行为合理的布（compliance 标定）。✅
+- feature3 flat-cloth 抓取 baseline。✅
+- **feature4 先打掉「真衣服」最大未知——PBD 自碰撞稳定性**（衣物必自折叠），再谈任务/数据。
+- feature5 一个可重复衣物操作任务 + 成功率，作为数据采集的「专家轨迹」来源。
+- feature6 才是 synthetic data 正题：录制 obs+action+粒子状态 → LeRobot 数据集。
+- feature7 批量化 + 闭环 eval。
+- 原「粒子状态录制/回放对接 LeRobot」下移到 feature6（需衣物+任务稳定后才有意义）。
 
 ## 已完成
 
