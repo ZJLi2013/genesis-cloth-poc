@@ -246,11 +246,16 @@ def main():
     cp2 = _np(cloth.get_particles_pos())
     finite = bool(np.isfinite(cp2).all())
     centroid = cp2[:, :2].mean(axis=0) if finite else np.array([np.nan, np.nan])
+    grasp_xy = cp2[grasped, :2].mean(axis=0) if finite else np.array([np.nan, np.nan])
     place_err = float(np.linalg.norm(centroid - target)) if finite else float("nan")
+    grasp_err = float(np.linalg.norm(grasp_xy - target)) if finite else float("nan")
+    grip_xy = _np(hand.get_pos())[:2]
     lifted = bool(zmax_track["v"] - pos0[:, 2].min() > 0.12)
     success = bool(finite and lifted and place_err < args.tol)
     print(f"[f5-ep] ep={args.ep} garment_x={args.garment_x} target=({args.target_x},{args.target_y}) "
-          f"success={success} place_err={place_err:.4f} lifted={lifted} finite={finite}")
+          f"success={success} place_err={place_err:.4f} grasp_err={grasp_err:.4f} lifted={lifted} "
+          f"finite={finite} centroid=({centroid[0]:.3f},{centroid[1]:.3f}) "
+          f"grip=({grip_xy[0]:.3f},{grip_xy[1]:.3f})")
 
 
 if __name__ == "__main__":
