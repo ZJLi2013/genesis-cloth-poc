@@ -1,11 +1,13 @@
 """feature5: 衣物 pick-and-place 专家任务(单 episode/进程) + 成功判据。
 
-复用 feature4 自标定水平抓取 + fix_particles_to_link(attach) + release_particle(解钉)。
-流程: 钉顶 rim 悬挂 → 抓近端 rim → attach → 解钉 → 抬起 → 移到目标上方 → 下降 → 松开 → 落到目标。
-success = 衣物质心到目标水平距离 < tol 且 finite。
+衣物用平布(meshes/cloth.obj, 沿用 feature3 已验证的抓取), 比 tube 更像衣物、放置更温柔。
+复用 feature3 自标定水平抓取 + fix_particles_to_link(attach) + release_particle(解钉)。
+流程: 钉顶边悬挂 → 抓近端竖边 → attach → 解钉 → 适度抬起 → 移到目标上方(消摆) →
+       下降到低位(消摆) → 松开 → 布落到目标。
+success = 衣物质心到目标水平距离 < tol 且 lifted 且 finite。
 
 用法(单 episode):
-    python scripts/50_garment_pick_place.py --ep 0 --garment-x 0.42 --target-x 0.45 --target-y 0.12 \
+    python scripts/50_garment_pick_place.py --ep 0 --garment-x 0.42 --target-x 0.45 --target-y 0.10 \
         --out output/feature5/ep0 [--render]
 N 个 episode 用显式串联多次调用编排, 再 grep [f5-ep] 统计 success rate。
 """
@@ -57,29 +59,6 @@ def _save_png(arr, path):
         np.save(path.replace(".png", ".npy"), arr)
 
 
-def make_tube_obj(path, r, h, nu, nv):
-    verts = []
-    for j in range(nv + 1):
-        for i in range(nu):
-            th = 2 * np.pi * i / nu
-            verts.append((r * np.cos(th), r * np.sin(th), (j / nv) * h))
-    faces = []
-    for j in range(nv):
-        for i in range(nu):
-            a = j * nu + i
-            b = j * nu + (i + 1) % nu
-            cc = (j + 1) * nu + i
-            d = (j + 1) * nu + (i + 1) % nu
-            faces.append((a, b, d))
-            faces.append((a, d, cc))
-    with open(path, "w") as f:
-        for v in verts:
-            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
-        for fc in faces:
-            f.write(f"f {fc[0]+1} {fc[1]+1} {fc[2]+1}\n")
-    return path
-
-
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--backend", default="amdgpu", choices=list(BACKENDS))
@@ -87,11 +66,10 @@ def main():
     p.add_argument("--garment-x", type=float, default=0.42)
     p.add_argument("--target-x", type=float, default=0.45)
     p.add_argument("--target-y", type=float, default=0.10)
-    p.add_argument("--mesh", default=None)
-    p.add_argument("--radius", type=float, default=0.06)
-    p.add_argument("--height", type=float, default=0.22)
-    p.add_argument("--particle-size", type=float, default=0.012)
-    p.add_argument("--tol", type=float, default=0.10)
+    p.add_argument("--mesh", default="meshes/cloth.obj")
+    p.add_argument("--scale", type=float, default=0.4)
+    p.add_argument("--particle-size", type=float, default=0.01)
+    p.add_argument("--tol", type=float, default=0.12)
     p.add_argument("--render", action="store_true")
     p.add_argument("--out", default="output/feature5/ep")
     args = p.parse_args()
@@ -108,18 +86,16 @@ def main():
     )
     scene.add_entity(gs.morphs.Plane())
     franka = scene.add_entity(gs.morphs.MJCF(file="xml/franka_emika_panda/panda.xml"))
-    # 目标视觉标记(极薄, 仅观感, 不挡落布)
-    scene.add_entity(gs.morphs.Box(size=(0.06, 0.06, 0.004),
+    scene.add_entity(gs.morphs.Box(size=(0.07, 0.07, 0.004),
                                    pos=(args.target_x, args.target_y, 0.002), fixed=True))
-    mesh = args.mesh or make_tube_obj(os.path.join(args.out, "tube.obj"),
-                                      args.radius, args.height, 44, 26)
     cloth = scene.add_entity(
-        gs.morphs.Mesh(file=mesh, scale=1.0, pos=(args.garment_x, 0.0, 0.30), euler=(0, 0, 0)),
+        gs.morphs.Mesh(file=args.mesh, scale=args.scale,
+                       pos=(args.garment_x, 0.0, 0.55), euler=(90.0, 0.0, 0.0)),
         material=gs.materials.PBD.Cloth(stretch_compliance=1e-7, bending_compliance=1e-4,
                                         static_friction=0.6, kinetic_friction=0.6),
     )
-    cam = scene.add_camera(res=(640, 480), pos=(1.3, 1.1, 0.8), lookat=(0.4, 0.0, 0.35),
-                           fov=50, GUI=False)
+    cam = scene.add_camera(res=(640, 480), pos=(1.4, 1.1, 0.9), lookat=(0.4, 0.0, 0.45),
+                           fov=48, GUI=False)
     scene.build()
 
     motors, fingers = np.arange(7), np.arange(7, 9)
@@ -152,7 +128,7 @@ def main():
     def track():
         zmax_track["v"] = max(zmax_track["v"], float(_np(cloth.get_particles_pos())[:, 2].max()))
 
-    for i in range(300):
+    for i in range(280):
         franka.control_dofs_position(q_home[:7], motors)
         franka.control_dofs_position(np.array([0.04, 0.04]), fingers)
         scene.step()
@@ -161,12 +137,10 @@ def main():
 
     cp = _np(cloth.get_particles_pos())
     x_min = cp[:, 0].min()
-    z_grasp = cp[:, 2].min() + 0.55 * (cp[:, 2].max() - cp[:, 2].min())
-    corner = np.array([x_min + 0.01, 0.0, z_grasp])
-    pre = np.array([x_min - 0.16, 0.0, z_grasp])
-    safe = pre.copy()
+    z_grasp = cp[:, 2].min() + 0.50 * (cp[:, 2].max() - cp[:, 2].min())
+    corner = np.array([x_min + 0.015, 0.0, z_grasp])
+    safe = np.array([x_min - 0.16, 0.0, z_grasp])
 
-    # 自标定: 水平 +X 接近 + 手指沿 Y (枚举, 不 step)
     best = None
     grid = (0, 45, 90, 135, 180, 225, 270, 315)
     for rx in grid:
@@ -192,7 +166,7 @@ def main():
                     best = (score, quat)
     if best is None:
         print(f"[f5-ep] ep={args.ep} garment_x={args.garment_x} target=({args.target_x},{args.target_y}) "
-              f"success=False place_err=nan lifted=False finite=True reason=no_quat")
+              f"success=False place_err=nan grasp_err=nan lifted=False finite=True reason=no_quat")
         return
     gquat = best[1]
     franka.set_dofs_position(ik(safe, gquat, 0.04), zero_velocity=True)
@@ -214,10 +188,20 @@ def main():
             if s % 6 == 0:
                 snap()
 
-    goto(pre, 0.04, 180)
+    def dwell(steps, force):
+        q = _np(franka.get_dofs_position()).copy()
+        for s in range(steps):
+            franka.control_dofs_position(q[:7], motors)
+            franka.control_dofs_force(np.array([force, force]), fingers)
+            scene.step()
+            track()
+            if s % 6 == 0:
+                snap()
+
+    goto(safe, 0.04, 180)
     goto(corner, 0.04, 180)
     q_close = ik(corner, gquat, 0.0)[:7]
-    for s in range(220):
+    for s in range(230):
         franka.control_dofs_position(q_close, motors)
         franka.control_dofs_force(np.array([-4.0, -4.0]), fingers)
         scene.step()
@@ -232,12 +216,15 @@ def main():
     cloth.fix_particles_to_link(link_idx=hand.idx, particles_idx_local=grasped)
     cloth.release_particle(particles_idx_local=top_idx)
 
-    lift_z = z_grasp + 0.28
-    goto(corner + np.array([0, 0, 0.28]), 0.0, 350, force=-4.0)          # 抬起
-    goto(np.array([args.target_x, args.target_y, lift_z]), 0.0, 350, force=-4.0)  # 平移到目标上方
-    goto(np.array([args.target_x, args.target_y, 0.30]), 0.0, 300, force=-4.0)    # 下降
-    cloth.release_particle(particles_idx_local=grasped)                  # 松开
-    for s in range(150):                                                 # 落定
+    # 温柔放置: 适度抬起 → 移到目标 → 下降到低位, 每段 dwell 消摆 → 低位松开
+    goto(corner + np.array([0, 0, 0.16]), 0.0, 300, force=-4.0)
+    dwell(90, -4.0)
+    goto(np.array([args.target_x, args.target_y, z_grasp + 0.16]), 0.0, 350, force=-4.0)
+    dwell(90, -4.0)
+    goto(np.array([args.target_x, args.target_y, 0.30]), 0.0, 300, force=-4.0)
+    dwell(90, -4.0)
+    cloth.release_particle(particles_idx_local=grasped)
+    for s in range(180):
         franka.control_dofs_position(np.array([0.04, 0.04]), fingers)
         scene.step()
         if s % 6 == 0:
@@ -249,13 +236,11 @@ def main():
     grasp_xy = cp2[grasped, :2].mean(axis=0) if finite else np.array([np.nan, np.nan])
     place_err = float(np.linalg.norm(centroid - target)) if finite else float("nan")
     grasp_err = float(np.linalg.norm(grasp_xy - target)) if finite else float("nan")
-    grip_xy = _np(hand.get_pos())[:2]
-    lifted = bool(zmax_track["v"] - pos0[:, 2].min() > 0.12)
+    lifted = bool(zmax_track["v"] - pos0[:, 2].min() > 0.10)
     success = bool(finite and lifted and place_err < args.tol)
     print(f"[f5-ep] ep={args.ep} garment_x={args.garment_x} target=({args.target_x},{args.target_y}) "
           f"success={success} place_err={place_err:.4f} grasp_err={grasp_err:.4f} lifted={lifted} "
-          f"finite={finite} centroid=({centroid[0]:.3f},{centroid[1]:.3f}) "
-          f"grip=({grip_xy[0]:.3f},{grip_xy[1]:.3f})")
+          f"finite={finite} centroid=({centroid[0]:.3f},{centroid[1]:.3f})")
 
 
 if __name__ == "__main__":
