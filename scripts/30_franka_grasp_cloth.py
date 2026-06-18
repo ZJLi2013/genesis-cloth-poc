@@ -41,7 +41,7 @@ def main():
     # 抓取点（布面附近），可调
     p.add_argument("--gx", type=float, default=0.45)
     p.add_argument("--gy", type=float, default=0.0)
-    p.add_argument("--gz", type=float, default=0.55)
+    p.add_argument("--gz", type=float, default=0.65)
     args = p.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -81,33 +81,41 @@ def main():
 
     grasp_q = np.array([0.0, 1.0, 0.0, 0.0])  # 手心朝下
 
-    def ik_to(pos):
-        return franka.inverse_kinematics(link=hand, pos=np.array(pos), quat=grasp_q)
+    def ik_to(pos, w=0.04):
+        q = franka.inverse_kinematics(link=hand, pos=np.array(pos), quat=grasp_q)
+        q = np.asarray(_to_np(q)).copy(); q[-2:] = w
+        return q
 
-    def hold(steps, finger_w=0.04, arm_q=None, render_tag=None):
+    def render(tag):
+        rgb = cam.render(rgb=True)
+        arr = rgb[0] if isinstance(rgb, (tuple, list)) else rgb
+        _save_png(arr, os.path.join(args.out, f"{tag}.png"))
+
+    def step_hold(steps, arm_q, finger_w, tag=None, every=80):
         for s in range(steps):
-            if arm_q is not None:
-                franka.control_dofs_position(arm_q[:7], motors)
+            franka.control_dofs_position(arm_q[:7], motors)
             franka.control_dofs_position(np.array([finger_w, finger_w]), fingers)
             scene.step()
-            if render_tag is not None and s % 100 == 0:
-                rgb = cam.render(rgb=True)
-                arr = rgb[0] if isinstance(rgb, (tuple, list)) else rgb
-                _save_png(arr, os.path.join(args.out, f"{render_tag}_{s:04d}.png"))
+            if tag and s % every == 0:
+                render(f"{tag}_{s:04d}")
 
-    # 1) 预抓取（布面上方一点），张开
-    q_pre = ik_to([args.gx, args.gy, args.gz + 0.12]); q_pre[-2:] = 0.04
-    hold(400, finger_w=0.04, arm_q=q_pre, render_tag="01_pre")
-    # 2) 下到抓取点
-    q_grasp = ik_to([args.gx, args.gy, args.gz]); q_grasp[-2:] = 0.04
-    hold(400, finger_w=0.04, arm_q=q_grasp, render_tag="02_reach")
+    # 0) 布料静置（机械臂保持初始姿态，远离布）
+    q_home = np.asarray(_to_np(franka.get_dofs_position())).copy()
+    step_hold(300, q_home, 0.04, tag="00_settle", every=150)
+
+    # 1) 瞬移到抓取位（手指张开骑跨薄布面，避免臂扫掠把布打飞）
+    q_grasp = ik_to([args.gx, args.gy, args.gz], w=0.04)
+    franka.set_dofs_position(q_grasp, zero_velocity=True)
+    scene.step(); render("01_teleport")
     z_before = np.asarray(_to_np(cloth.get_particles_pos()))[:, 2].copy()
-    # 3) 闭合手指夹住
-    hold(400, finger_w=0.0, arm_q=q_grasp, render_tag="03_close")
+
+    # 2) 闭合手指夹住
+    step_hold(300, q_grasp, 0.0, tag="02_close", every=80)
     f_force = np.asarray(_to_np(franka.get_links_net_contact_force()))
-    # 4) 抬起
-    q_lift = ik_to([args.gx, args.gy, args.gz + 0.2]); q_lift[-2:] = 0.0
-    hold(600, finger_w=0.0, arm_q=q_lift, render_tag="04_lift")
+
+    # 3) 抬起（IK 缓慢上移）
+    q_lift = ik_to([args.gx, args.gy, args.gz + 0.18], w=0.0)
+    step_hold(500, q_lift, 0.0, tag="03_lift", every=80)
 
     cpos = np.asarray(_to_np(cloth.get_particles_pos()))
     finite = bool(np.isfinite(cpos).all())
