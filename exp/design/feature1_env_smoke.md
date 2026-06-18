@@ -1,6 +1,9 @@
 # feature1：环境就绪 + 最小布料 smoke
 
-状态：设计中 → （实现后转 as-built）
+状态：**as-built ✅（2026-06-18，R9700 验证通过）**
+
+端到端验证：`gs.amdgpu` 原生生效；PBD 布料 step 稳定无 NaN；EGL GPU 离屏渲染出图。详见 `../part1-exp.md`。
+实现：`scripts/00_env_check.py`、`scripts/10_cloth_smoke.py`、`scripts/run_feature1.sh`。
 
 ## 核心判断
 
