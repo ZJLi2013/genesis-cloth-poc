@@ -22,6 +22,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    print(f"[env-check] genesis={gs.__version__}")
+    try:
+        import torch
+
+        print(f"[env-check] torch={torch.__version__} hip={torch.version.hip}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"[env-check] torch import failed: {exc}")
+
     # gs.init 会在日志中打印实际生效的 backend、GPU 名与显存。
     # 若回退到 CPU，说明该后端在本节点不可用（见 part1-exp 回退项）。
     gs.init(backend=BACKENDS[args.backend]())
