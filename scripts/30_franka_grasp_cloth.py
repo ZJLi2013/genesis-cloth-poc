@@ -125,6 +125,7 @@ def main():
         franka.control_dofs_position(np.array([0.04, 0.04]), fingers)
         scene.step()
     render("00_settle")
+    cstat("settle_only")
 
     cp = _np(cloth.get_particles_pos())
     x_max, x_min = cp[:, 0].max(), cp[:, 0].min()
@@ -149,8 +150,7 @@ def main():
                     q = ik(safe, quat, w=0.04)
                 except Exception:  # noqa: BLE001
                     continue
-                franka.set_dofs_position(q, zero_velocity=True)
-                scene.step()
+                franka.set_dofs_position(q, zero_velocity=True)  # 仅运动学，不 step → 不碰布
                 hp = _np(hand.get_pos())
                 if np.linalg.norm(hp - safe) > 0.04:   # IK 没到位，跳过
                     continue
