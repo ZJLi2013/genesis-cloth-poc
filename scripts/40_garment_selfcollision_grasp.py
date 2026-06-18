@@ -294,8 +294,9 @@ def run_grasp(args):
     cp2 = _np(cloth.get_particles_pos())
     finite = bool(np.isfinite(cp2).all())
     zmin_rise = float(cp2[:, 2].min() - z_before.min())
+    pen = penetration_ratio(cp2, args.particle_size) if finite else float("nan")
     print(f"[f4-grasp-metric] finite={finite} cloth_zmin_rise={zmin_rise:.4f} "
-          f"cloth_zmax={cp2[:,2].max():.4f}")
+          f"cloth_zmax={cp2[:,2].max():.4f} fold_penetration_ratio={pen:.4f}")
 
 
 def main():
