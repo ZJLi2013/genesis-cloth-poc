@@ -58,15 +58,23 @@ def main() -> None:
     gs.init(backend=BACKENDS[args.backend]())
 
     scene = gs.Scene(
-        sim_options=gs.options.SimOptions(dt=4e-3),
-        pbd_options=gs.options.PBDOptions(iterations=24, damping=0.2),
+        sim_options=gs.options.SimOptions(dt=4e-3, substeps=10),
+        pbd_options=gs.options.PBDOptions(
+            particle_size=0.01,
+            max_stretch_solver_iterations=8,
+            max_bending_solver_iterations=2,
+        ),
         show_viewer=False,
     )
     scene.add_entity(gs.morphs.Plane())
     cloth = scene.add_entity(
         gs.morphs.Mesh(file=grid_obj, pos=(0.0, 0.0, 0.5), euler=(0.0, 0.0, 0.0)),
+        # Genesis 1.1.1 compliance 语义：compliance = 1/刚度，越小越硬。
         material=gs.materials.PBD.Cloth(
-            stretch_stiffness=0.95, bend_stiffness=0.05, thickness=0.003
+            stretch_compliance=1e-7,   # 抗拉伸（硬）
+            bending_compliance=1e-4,   # 易弯曲垂坠
+            static_friction=0.3,
+            kinetic_friction=0.3,
         ),
     )
     cam = scene.add_camera(
@@ -81,10 +89,18 @@ def main() -> None:
             arr = rgb[0] if isinstance(rgb, (tuple, list)) else rgb
             _save_png(arr, os.path.join(args.out, f"frame_{i:05d}.png"))
 
-    # 末帧 + 简单 NaN 检查
-    pts = cloth.get_state()
+    # 末帧 + 简单有限性检查
+    state = cloth.get_state()
+    pos = getattr(state, "pos", None)
+    if pos is not None:
+        arr = np.asarray(pos.cpu() if hasattr(pos, "cpu") else pos)
+        print(
+            f"[smoke] cloth pos shape={arr.shape} finite={np.isfinite(arr).all()} "
+            f"z_min={arr[..., 2].min():.4f} z_max={arr[..., 2].max():.4f}"
+        )
+    else:
+        print(f"[smoke] cloth state type={type(state)} attrs={[a for a in dir(state) if not a.startswith('_')][:20]}")
     print(f"[smoke] done. steps={args.steps}, frames in {args.out}")
-    print(f"[smoke] cloth state type={type(pts)}")
 
 
 def _save_png(arr, path: str) -> None:
