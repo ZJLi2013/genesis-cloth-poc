@@ -78,7 +78,7 @@ def main():
     franka = scene.add_entity(gs.morphs.MJCF(file="xml/franka_emika_panda/panda.xml"))
     cloth = scene.add_entity(
         gs.morphs.Mesh(file="meshes/cloth.obj", scale=args.scale,
-                       pos=(0.45, 0.0, 0.7), euler=(90.0, 0.0, 0.0)),
+                       pos=(0.40, 0.0, 0.55), euler=(90.0, 0.0, 0.0)),
         material=gs.materials.PBD.Cloth(stretch_compliance=1e-7, bending_compliance=1e-4,
                                         static_friction=0.6, kinetic_friction=0.6),
     )
@@ -122,18 +122,21 @@ def main():
     cp = _np(cloth.get_particles_pos())
     x_max, x_min = cp[:, 0].max(), cp[:, 0].min()
     z_max, z_min = cp[:, 2].max(), cp[:, 2].min()
-    z_grasp = z_min + 0.45 * (z_max - z_min)
-    corner = np.array([x_max - 0.015, 0.0, z_grasp])           # 抓取目标：+X 竖边
-    pre = np.array([x_max + 0.16, 0.0, z_grasp])               # 预抓取（布外侧，安全）
-    safe = np.array([x_max + 0.16, -0.30, z_grasp + 0.05])     # 标定/安全位（远离布）
+    z_grasp = z_min + 0.50 * (z_max - z_min)
+    # 抓【近端 -X 竖边】：离机器人更近(可达)，且水平接近时手掌停在布的 x 外侧→不重叠
+    corner = np.array([x_min + 0.015, 0.0, z_grasp])           # 抓取目标
+    pre = np.array([x_min - 0.16, 0.0, z_grasp])               # 预抓取（布外侧）
+    safe = np.array([x_min - 0.16, 0.0, z_grasp])              # 标定/安全位
     print(f"[grasp] cloth x=[{x_min:.3f},{x_max:.3f}] z=[{z_min:.3f},{z_max:.3f}] "
-          f"z_grasp={z_grasp:.3f}")
+          f"z_grasp={z_grasp:.3f} pre_dist={np.linalg.norm(pre):.3f}")
 
-    # 1) 自标定夹爪朝向：枚举候选 quat，在 safe 位瞬移读手指轴，选 approach≈-X & finger‖Y
+    # 1) 自标定夹爪朝向：枚举候选 quat，在 safe 位瞬移读手指轴。
+    #    硬性要求【水平 +X 接近】(approach·+X>0.85, |z|<0.3)，再最大化手指沿 Y。
     best = None
-    for rx in (0, 90, 180, 270):
-        for ry in (0, 90, 180, 270):
-            for rz in (0, 90, 180, 270):
+    grid = (0, 45, 90, 135, 180, 225, 270, 315)
+    for rx in grid:
+        for ry in grid:
+            for rz in grid:
                 quat = euler2quat(rx, ry, rz)
                 try:
                     q = ik(safe, quat, w=0.04)
@@ -142,7 +145,7 @@ def main():
                 franka.set_dofs_position(q, zero_velocity=True)
                 scene.step()
                 hp = _np(hand.get_pos())
-                if np.linalg.norm(hp - safe) > 0.05:   # IK 没到位，跳过
+                if np.linalg.norm(hp - safe) > 0.04:   # IK 没到位，跳过
                     continue
                 lp, rp = _np(lf.get_pos()), _np(rf.get_pos())
                 tip_mid = 0.5 * (lp + rp)
@@ -150,11 +153,13 @@ def main():
                 approach = approach / (np.linalg.norm(approach) + 1e-9)
                 fsep = lp - rp
                 fsep = fsep / (np.linalg.norm(fsep) + 1e-9)
-                score = (-approach[0]) + abs(fsep[1])   # 接近朝 -X + 手指沿 Y
+                if approach[0] < 0.85 or abs(approach[2]) > 0.3:   # 必须水平朝 +X
+                    continue
+                score = abs(fsep[1])                    # 手指沿 Y 越好
                 if best is None or score > best[0]:
                     best = (score, quat, (rx, ry, rz), approach.copy(), fsep.copy())
     if best is None:
-        print("[grasp] no feasible quat found"); return
+        print("[grasp] no feasible horizontal quat found"); return
     score, gquat, geuler, approach, fsep = best
     print(f"[grasp] best euler={geuler} score={score:.3f} approach={approach.round(2)} "
           f"finger_sep={fsep.round(2)}")
@@ -183,7 +188,7 @@ def main():
     # 4) 闭合手指
     for s in range(250):
         franka.control_dofs_position(ik(corner, gquat, 0.0)[:7], motors)
-        franka.control_dofs_force(np.array([-15.0, -15.0]), fingers)
+        franka.control_dofs_force(np.array([-12.0, -12.0]), fingers)
         scene.step()
         if s % 60 == 0:
             render(f"04_close_{s:04d}")
@@ -195,7 +200,7 @@ def main():
         a = (s + 1) / 400
         q_t = (1 - a) * cur + a * q_lift
         franka.control_dofs_position(q_t[:7], motors)
-        franka.control_dofs_force(np.array([-15.0, -15.0]), fingers)
+        franka.control_dofs_force(np.array([-12.0, -12.0]), fingers)
         scene.step()
         if s % 80 == 0:
             render(f"05_lift_{s:04d}")
