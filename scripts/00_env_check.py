@@ -4,6 +4,9 @@
     python scripts/00_env_check.py --backend amdgpu
 """
 import argparse
+import os
+
+os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
 
 import genesis as gs
 
