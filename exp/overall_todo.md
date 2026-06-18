@@ -1,0 +1,32 @@
+# 布料场景仿真（Genesis × RDNA4）开发 Backlog
+
+大 feature：在 AMD RDNA4 上用 Genesis 做布料/衣物仿真，迭代验证「单资产 → 抓取 → 数据录制 → 数据生成 → 闭环评估」全链路。
+方法论：feature-dev-pipeline（Plan → Design → Build+Experiment → Close 循环）。
+可行性分析依据：lehome 仓库 `exp/study.md` 第二部分。
+
+## 现状基线
+
+- 目标节点：AMD R9700（RDNA4），ROCm 7.x，radeonsi GPU 硬件光栅化。
+- 物理：Genesis `PBDSolver` + `PBD.Cloth`（布料底层 PBD/XPBD，与 LeHome 同源）。
+- 后端入口：`gs.init(backend=gs.amdgpu)`（计算）/ `gs.vulkan`（渲染），待实测确认。
+- 代码现状：本 repo 从零起步，仅有骨架。
+
+## 优先级 Backlog
+
+| 优先级 | Feature | 子任务 | 设计 | 实验 | 状态 |
+|--------|---------|--------|------|------|------|
+| **P0** | feature1 | 环境就绪 + 最小布料 smoke | `design/feature1_env_smoke.md` | `part1-exp.md` | **进行中** |
+| **P0** | feature2 | 单布料资产加载 + 物性标定 | `design/feature2_cloth_asset.md` | `part2-exp.md` | 待开始 |
+| **P1** | feature3 | 机器人 + 夹爪抓布接触验证 | `design/feature3_grasp_contact.md` | `part3-exp.md` | 待开始 |
+| **P1** | feature4 | 粒子状态录制/回放对接 LeRobot | `design/feature4_state_io.md` | `part4-exp.md` | 待开始 |
+| **P2** | feature5 | 布料数据生成流水线 | `design/feature5_datagen.md` | `part5-exp.md` | 待开始 |
+| **P2** | feature6 | 闭环评估 | `design/feature6_eval.md` | `part6-exp.md` | 待开始 |
+
+排序理由：
+- P0 先解决「能不能在 RDNA4 上稳定跑出一块行为合理的布」——后续一切的地基，风险最高、杠杆最大。
+- P1 解决「机器人能不能操作布 + 状态能不能进数据集」——具身操作核心闭环；接触稳定性是最大不确定项。
+- P2 把单点能力扩成数据/评估流水线，依赖 P0/P1 成立。
+
+## 已完成
+
+（暂无）

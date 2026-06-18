@@ -1,0 +1,19 @@
+[project]
+name = "genesis-cloth-poc"
+version = "0.1.0"
+description = "Cloth/garment simulation POC on AMD RDNA4 with Genesis"
+requires-python = ">=3.10"
+dependencies = [
+    "genesis-world",   # 从 main 分支安装：pip install git+https://github.com/Genesis-Embodied-AI/Genesis@main
+    "numpy==2.1.2",    # 匹配 Genesis / scikit-image ABI
+]
+
+# torch (ROCm) 单独按节点 ROCm 版本安装，不在此锁定。
+# 数据/训练相关依赖（lerobot==0.4.4, transformers）等 feature4+ 再加。
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

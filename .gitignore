@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# 运行产出
+output/
+*.mp4
+*.png
+*.ply
+*.npz
+
+# 大资产（按需用 git-lfs 或外部存储）
+assets/cloth/*.obj
+assets/cloth/*.glb
+
+# 环境
+.env
