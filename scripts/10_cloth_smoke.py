@@ -89,18 +89,36 @@ def main() -> None:
             arr = rgb[0] if isinstance(rgb, (tuple, list)) else rgb
             _save_png(arr, os.path.join(args.out, f"frame_{i:05d}.png"))
 
-    # 末帧 + 简单有限性检查
-    state = cloth.get_state()
-    pos = getattr(state, "pos", None)
-    if pos is not None:
-        arr = np.asarray(pos.cpu() if hasattr(pos, "cpu") else pos)
+    # 末帧 + 简单有限性检查（PBD2DEntity 的状态读取 API 因版本而异，逐一尝试）
+    arr = _read_particles(cloth)
+    if arr is not None:
         print(
-            f"[smoke] cloth pos shape={arr.shape} finite={np.isfinite(arr).all()} "
+            f"[smoke] cloth particles shape={arr.shape} finite={np.isfinite(arr).all()} "
             f"z_min={arr[..., 2].min():.4f} z_max={arr[..., 2].max():.4f}"
         )
     else:
-        print(f"[smoke] cloth state type={type(state)} attrs={[a for a in dir(state) if not a.startswith('_')][:20]}")
+        print(
+            f"[smoke] particle read failed; methods="
+            f"{[a for a in dir(cloth) if 'pos' in a.lower() or 'particle' in a.lower() or 'state' in a.lower()]}"
+        )
     print(f"[smoke] done. steps={args.steps}, frames in {args.out}")
+
+
+def _read_particles(entity):
+    for name in ("get_state", "get_particles", "get_pos", "get_particles_pos"):
+        fn = getattr(entity, name, None)
+        if fn is None:
+            continue
+        try:
+            out = fn()
+        except Exception:  # noqa: BLE001
+            continue
+        cand = getattr(out, "pos", out)
+        try:
+            return np.asarray(cand.cpu() if hasattr(cand, "cpu") else cand)
+        except Exception:  # noqa: BLE001
+            continue
+    return None
 
 
 def _save_png(arr, path: str) -> None:
