@@ -6,7 +6,7 @@
 import argparse
 import os
 
-os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+os.environ["PYOPENGL_PLATFORM"] = "egl"
 
 import genesis as gs
 

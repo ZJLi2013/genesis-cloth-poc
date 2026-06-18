@@ -9,8 +9,9 @@
 import argparse
 import os
 
-# RDNA4 headless：必须在 import genesis 之前设定 EGL，否则 genesis 默认走 glx → 无显示报错。
-os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+# RDNA4 headless：镜像把 PYOPENGL_PLATFORM 预设为 glx（无显示会崩），必须在 import genesis
+# 之前【强制】覆盖为 egl（不能用 setdefault，否则保留镜像的 glx）。
+os.environ["PYOPENGL_PLATFORM"] = "egl"
 
 import numpy as np
 import genesis as gs

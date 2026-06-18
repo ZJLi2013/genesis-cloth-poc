@@ -4,8 +4,8 @@
 set -uo pipefail
 
 BACKEND="${1:-amdgpu}"
-# RDNA4 headless 渲染走 EGL（radeonsi GPU 光栅化），否则 pyrender 退回 glx 无显示报错。
-export PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}"
+# RDNA4 headless 渲染【强制】走 EGL（镜像预设 glx 会无显示报错）。
+export PYOPENGL_PLATFORM=egl
 OUT="output/feature1"
 mkdir -p "$OUT"
 LOG="$OUT/run.log"
