@@ -27,7 +27,7 @@
 - 自标定结果：`euler=(45,90,45)`，`approach=[1,0,0]`（水平 +X）、`finger_sep=[0,1,0]`（沿 Y 骑跨布面）。
 - 抓取区抬升 `grasp_region_dz=+0.17m`，`cloth_zmax 0.63→0.85`：**夹爪夹住竖边并把它提起**（顶边仍固定，被抓边升高→布料折叠变形）。
 - 全程 `finite=True`、`cloth_zmax` 稳定，**无穿插无爆飞**。
-- 渲染帧：`output/feature3/grasp/{01_safe_calib,04_close_*,05_lift_*}.png` 可视化确认。
+- 演示视频：`output/feature3/feature3_grasp.mp4`（由 `scripts/make_video.py` 合成；帧目录为临时产物，用后即清）。
 
 ## 踩坑与定位（关键）
 

@@ -1,7 +1,7 @@
 # part2 实验记录：布料 + compliance 物性标定
 
 目标：建立「材质参数 → 布料行为」的标定方法论，并验证 RDNA4 上结果稳定可控。
-脚本：`scripts/20_cloth_drape.py`（悬臂垂坠）、`scripts/21_cloth_over_cylinder.py`（搭圆柱）、`scripts/run_feature2.sh`。
+脚本：早期悬臂垂坠 / 搭圆柱探索脚本（已验证 bending 在平整悬挂下无判别力后移除），最终标定见 `scripts/22_real_cloth_bending.py`。
 
 ## 实验矩阵与结果
 
@@ -57,7 +57,7 @@
 ## feature2.1：真实 cloth.obj + bending 软区确认（✅）
 
 构型：Genesis 自带 `meshes/cloth.obj`（scale 0.4，remesh 后 504 粒子），一半 clamp 在固定桌面、
-一半悬出桌沿（强制曲率）。脚本 `scripts/22_real_cloth_bending.py` / `run_feature2_1.sh`。
+一半悬出桌沿（强制曲率）。脚本 `scripts/22_real_cloth_bending.py`（`--bending` 扫描）。
 钉点链路用 `get_particles_pos` 按 x 筛 clamp（`find_closest_particle(pos)` 已在 `particle_entity.py:716` 确认可用）。
 
 | bending_compliance | droop(下垂量) |
@@ -69,7 +69,7 @@
 
 **结论**：bending 终于**有效且单调**（droop 随 compliance 增大），转折在 ~1e-2→1e0，与 alpha=compliance/substep_dt²
 （轻布阈值 ~2e-3）预测一致。三要素缺一不可：① 真实/足够网格 ② 强制曲率构型（桌沿/圆柱，非平整悬挂）
-③ compliance 进软区。侧视渲染人工核对：硬布边缘上翘外挑、软布圆润垂过桌沿（见本地 `exp/f21_stiff.png` / `f21_soft.png`）。
+③ compliance 进软区。侧视渲染人工核对：硬布边缘上翘外挑、软布圆润垂过桌沿。
 全程 `finite=True`。
 
 ## Next Step

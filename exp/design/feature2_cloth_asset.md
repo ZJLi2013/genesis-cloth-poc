@@ -4,8 +4,7 @@
 
 结论：标定方法论 + stretch 工作区间已建立；关键是 solver 的 `alpha=compliance/substep_dt²` 缩放
 （轻布需 compliance≳1e-2 才进软区）。社区参考：官方示例用默认参数 + `find_closest_particle` + `meshes/cloth.obj`。
-详见 `../part2-exp.md`。实现：`scripts/20_cloth_drape.py`、`scripts/21_cloth_over_cylinder.py`、
-`scripts/run_feature2*.sh`。
+详见 `../part2-exp.md`。最终实现：`scripts/22_real_cloth_bending.py`（早期悬臂/圆柱探索脚本已移除）。
 
 ## 范围决策（KISS）
 
@@ -32,7 +31,7 @@ backlog 原描述为「单布料资产加载」。真实 towel.usd 资产需从 
 - `finite=True`（无 NaN/爆飞）。
 - 渲染帧人工核对：硬→近似平直外伸；软→明显下垂/卷曲。
 
-实现：`scripts/20_cloth_drape.py`、`scripts/run_feature2.sh`，结果回填 `../part2-exp.md`。
+结果回填 `../part2-exp.md`（早期悬臂垂坠脚本已移除，最终标定用 `scripts/22_real_cloth_bending.py`）。
 
 ## 不做
 

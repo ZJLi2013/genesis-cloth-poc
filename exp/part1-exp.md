@@ -12,7 +12,7 @@
 - 持久容器：`docker run -d --name <CONTAINER> --device=/dev/kfd --device=/dev/dri --group-add video --ipc=host -v <repo>:/work -w /work genesis-amd:latest sleep infinity`
 - 依赖修复（**镜像 numpy 2.2.6 与 torch/genesis/skimage 的 numpy-1.x ABI 冲突**）：
   `pip install --force-reinstall numpy==1.26.4 scikit-image==0.22.0`
-- 运行：`docker exec <CONTAINER> bash -lc 'bash scripts/run_feature1.sh amdgpu'`
+- 运行：`PYOPENGL_PLATFORM=egl python scripts/00_env_check.py --backend amdgpu` 然后 `... scripts/10_cloth_smoke.py --backend amdgpu --steps 1000 --out output/feature1/smoke`
 
 ## 关键结果
 
