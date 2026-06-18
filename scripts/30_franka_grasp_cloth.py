@@ -61,7 +61,7 @@ def _np(t):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--backend", default="amdgpu", choices=list(BACKENDS))
-    p.add_argument("--scale", type=float, default=0.3)
+    p.add_argument("--scale", type=float, default=0.4)
     p.add_argument("--out", default="output/feature3/grasp")
     p.add_argument("--render-every", type=int, default=6, help="每隔几步出一帧(视频用)")
     args = p.parse_args()
@@ -214,16 +214,33 @@ def main():
             snap()
     cstat("after_close")
     fcontact = _np(franka.get_links_net_contact_force())
-    # 5) 抬起
+
+    # 4b) 抓取区粒子绑到夹爪 link（保证拎得起，类比 LeHome 的 attach）+ 解钉顶边
+    tip_mid = 0.5 * (_np(lf.get_pos()) + _np(rf.get_pos()))
+    cp_now = _np(cloth.get_particles_pos())
+    grasped = np.nonzero(np.linalg.norm(cp_now - tip_mid, axis=1) < 0.05)[0].astype(np.int32)
+    if grasped.size == 0:  # 兜底：取最近的几颗
+        grasped = np.argsort(np.linalg.norm(cp_now - tip_mid, axis=1))[:6].astype(np.int32)
+    cloth.fix_particles_to_link(link_idx=hand.idx, particles_idx_local=grasped)
+    cloth.release_particle(particles_idx_local=top_idx)   # 解钉顶边
+    print(f"[grasp] attached={grasped.size} to hand(link {hand.idx}); released top={top_idx.size}")
+
+    # 5) 拎起（顶边已松，整块布靠夹爪承载）
     cur = _np(franka.get_dofs_position()).copy()
-    q_lift = ik(corner + np.array([0, 0, 0.18]), gquat, 0.0)
-    for s in range(400):
-        a = (s + 1) / 400
+    q_lift = ik(corner + np.array([0, 0, 0.28]), gquat, 0.0)
+    for s in range(500):
+        a = (s + 1) / 500
         q_t = (1 - a) * cur + a * q_lift
         franka.control_dofs_position(q_t[:7], motors)
         franka.control_dofs_force(np.array([-4.0, -4.0]), fingers)
         scene.step()
         if s % re == 0:
+            snap()
+    for _ in range(60):   # 顶部停留，展示稳定悬挂
+        franka.control_dofs_position(q_lift[:7], motors)
+        franka.control_dofs_force(np.array([-4.0, -4.0]), fingers)
+        scene.step()
+        if _ % re == 0:
             snap()
     cstat("after_lift")
 
@@ -231,8 +248,10 @@ def main():
     finite = bool(np.isfinite(cp2).all())
     near = np.nonzero(np.linalg.norm(cp[:, [0, 2]] - corner[[0, 2]], axis=1) < 0.06)[0]
     dz = float(cp2[near, 2].mean() - z_before[near].mean()) if near.size else float("nan")
+    zmin_rise = float(cp2[:, 2].min() - z_before.min())   # 整块布最低点抬升→真被拎起
     print(f"[grasp-metric] finite={finite} near={near.size} grasp_region_dz={dz:.4f} "
-          f"cloth_zmax={cp2[:,2].max():.4f} max_finger_contact={np.abs(fcontact).max():.4f}")
+          f"cloth_zmin_rise={zmin_rise:.4f} cloth_zmax={cp2[:,2].max():.4f} "
+          f"max_finger_contact={np.abs(fcontact).max():.4f}")
 
 
 if __name__ == "__main__":
