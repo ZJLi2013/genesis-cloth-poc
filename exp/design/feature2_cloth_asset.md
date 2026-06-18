@@ -1,6 +1,11 @@
 # feature2：单布料 + compliance 物性标定
 
-状态：设计中 →（实现后转 as-built）
+状态：**as-built ✅（2026-06-18）**
+
+结论：标定方法论 + stretch 工作区间已建立；关键是 solver 的 `alpha=compliance/substep_dt²` 缩放
+（轻布需 compliance≳1e-2 才进软区）。社区参考：官方示例用默认参数 + `find_closest_particle` + `meshes/cloth.obj`。
+详见 `../part2-exp.md`。实现：`scripts/20_cloth_drape.py`、`scripts/21_cloth_over_cylinder.py`、
+`scripts/run_feature2*.sh`。
 
 ## 范围决策（KISS）
 

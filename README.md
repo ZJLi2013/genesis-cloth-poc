@@ -19,3 +19,4 @@ feature-dev-pipeline：backlog（`exp/overall_todo.md`）→ 设计（`exp/desig
 > 每完成一个 feature 回填一行：结论 + 关键证据 + 对后续影响 + 指回 partN。
 
 - **[feature1 ✅] Genesis 1.1.1 布料仿真在 R9700(RDNA4) 跑通**：`gs.amdgpu` 原生生效（29.86GB），PBD 布料 step 无 NaN，EGL GPU 渲染出图。三个环境约束影响所有后续 feature：① numpy 须降到 1.26.4（镜像 torch/genesis 按 numpy-1.x 编译）；② 渲染须强制 `PYOPENGL_PLATFORM=egl`（镜像预设 glx）；③ `PBD.Cloth` 用 compliance 语义（1/刚度）。证据/复现见 `exp/part1-exp.md`。
+- **[feature2 ✅] compliance 物性标定图谱建立**：`stretch_compliance` 是有效旋钮，转折点 ~1e-1…1e0（≤1e-2 不可伸长=真实布料区，≥1e2 橡皮筋）。**关键洞察**：solver 用 `alpha=compliance/substep_dt²`，轻布需 `compliance≳1e-2` 才进软区——所以小范围扫描看不出差别，且官方示例直接用默认值(1e-7)。bending 标定需强制曲率构型 + 软区参数。社区参考：`examples/tutorials/pbd_cloth.py` 用默认参数 + `find_closest_particle` 钉点 + 自带 `meshes/cloth.obj`。证据见 `exp/part2-exp.md`。

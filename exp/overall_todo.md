@@ -17,7 +17,7 @@
 | 优先级 | Feature | 子任务 | 设计 | 实验 | 状态 |
 |--------|---------|--------|------|------|------|
 | **P0** | feature1 | 环境就绪 + 最小布料 smoke | `design/feature1_env_smoke.md` | `part1-exp.md` | **✅ 完成** |
-| **P0** | feature2 | 单布料资产加载 + 物性标定 | `design/feature2_cloth_asset.md` | `part2-exp.md` | **进行中** |
+| **P0** | feature2 | 布料 + compliance 物性标定 | `design/feature2_cloth_asset.md` | `part2-exp.md` | **✅ 完成** |
 | **P1** | feature3 | 机器人 + 夹爪抓布接触验证 | `design/feature3_grasp_contact.md` | `part3-exp.md` | 待开始 |
 | **P1** | feature4 | 粒子状态录制/回放对接 LeRobot | `design/feature4_state_io.md` | `part4-exp.md` | 待开始 |
 | **P2** | feature5 | 布料数据生成流水线 | `design/feature5_datagen.md` | `part5-exp.md` | 待开始 |
@@ -31,3 +31,4 @@
 ## 已完成
 
 - **feature1（2026-06-18）**：R9700 上 Genesis 1.1.1 布料 smoke 跑通，`gs.amdgpu` 原生 + EGL GPU 渲染。结论见 README 结论速查 / `part1-exp.md`。
+- **feature2（2026-06-18）**：compliance 物性标定图谱建立（stretch 工作区间 ~1e-1…1e0；solver α=compliance/substep_dt² 缩放洞察）；对齐官方默认参数与 `find_closest_particle` / `meshes/cloth.obj` 用法。结论见 `part2-exp.md`。后置 feature2.1：真实 mesh + bending 软区标定。
