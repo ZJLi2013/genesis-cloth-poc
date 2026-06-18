@@ -177,13 +177,12 @@ def main():
     scene.step(); snap()
 
     def goto(target_xyz, w, steps, force=None):
-        # 笛卡尔逐点插值: 每步在直线路径上重解 IK(种子=当前位形), 避免关节解支跳变把布甩飞
-        start = _np(hand.get_pos()).copy()
-        target_xyz = np.asarray(target_xyz, dtype=float)
+        # 关节空间插值到末端 IK 解(单次求解, 平滑无抖); 大幅侧移交给短行程+消摆保证稳定
+        qg = ik(target_xyz, gquat, w)
+        qc = _np(franka.get_dofs_position()).copy()
         for s in range(steps):
             a = (s + 1) / steps
-            way = (1 - a) * start + a * target_xyz
-            qt = ik(way, gquat, w)
+            qt = (1 - a) * qc + a * qg
             franka.control_dofs_position(qt[:7], motors)
             if force is None:
                 franka.control_dofs_position(np.array([w, w]), fingers)
