@@ -31,4 +31,5 @@
 ## 已完成
 
 - **feature1（2026-06-18）**：R9700 上 Genesis 1.1.1 布料 smoke 跑通，`gs.amdgpu` 原生 + EGL GPU 渲染。结论见 README 结论速查 / `part1-exp.md`。
-- **feature2（2026-06-18）**：compliance 物性标定图谱建立（stretch 工作区间 ~1e-1…1e0；solver α=compliance/substep_dt² 缩放洞察）；对齐官方默认参数与 `find_closest_particle` / `meshes/cloth.obj` 用法。结论见 `part2-exp.md`。后置 feature2.1：真实 mesh + bending 软区标定。
+- **feature2（2026-06-18）**：compliance 物性标定图谱建立（stretch 工作区间 ~1e-1…1e0；solver α=compliance/substep_dt² 缩放洞察）；对齐官方默认参数与 `find_closest_particle` / `meshes/cloth.obj` 用法。结论见 `part2-exp.md`。
+- **feature2.1（2026-06-18）**：真实 `cloth.obj` + 桌沿悬臂，bending 软区单调有效（droop 0.037→0.096）。结论见 `part2-exp.md`。

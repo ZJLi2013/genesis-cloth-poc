@@ -54,9 +54,25 @@
 - 2.3 圆柱过高 + 布过长 → 两侧垂到地面（bottom_z=0.005），指标被地面接触污染。后续抬高 cylinder 或缩短布。
 - 仿真链路稳定，全程无 NaN/发散。
 
+## feature2.1：真实 cloth.obj + bending 软区确认（✅）
+
+构型：Genesis 自带 `meshes/cloth.obj`（scale 0.4，remesh 后 504 粒子），一半 clamp 在固定桌面、
+一半悬出桌沿（强制曲率）。脚本 `scripts/22_real_cloth_bending.py` / `run_feature2_1.sh`。
+钉点链路用 `get_particles_pos` 按 x 筛 clamp（`find_closest_particle(pos)` 已在 `particle_entity.py:716` 确认可用）。
+
+| bending_compliance | droop(下垂量) |
+|--------------------|---------------|
+| 1e-4 | 0.0373 |
+| 1e-2 | 0.0431 |
+| 1e0  | 0.0744 |
+| 1e2  | 0.0955 |
+
+**结论**：bending 终于**有效且单调**（droop 随 compliance 增大），转折在 ~1e-2→1e0，与 alpha=compliance/substep_dt²
+（轻布阈值 ~2e-3）预测一致。三要素缺一不可：① 真实/足够网格 ② 强制曲率构型（桌沿/圆柱，非平整悬挂）
+③ compliance 进软区。侧视渲染人工核对：硬布边缘上翘外挑、软布圆润垂过桌沿（见本地 `exp/f21_stiff.png` / `f21_soft.png`）。
+全程 `finite=True`。
+
 ## Next Step
 
-- feature2 收尾：标定图谱与方法论已建立（stretch 工作区间明确）。
-- feature2.1（后置增强）：用 `meshes/cloth.obj` 真实网格 + `find_closest_particle` 复跑，并把 bending 推到软区
-  （搭圆柱构型）做一次弯曲标定确认。
+- feature2 系列收尾：stretch 与 bending 的工作区间 + 标定方法论均已建立并验证。
 - 进入 feature3：机器人 + 夹爪抓布接触验证。
