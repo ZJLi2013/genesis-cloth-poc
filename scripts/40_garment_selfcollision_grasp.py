@@ -132,8 +132,12 @@ def build_scene(args, axis, cloth_pos, cloth_euler, mesh_file=None, sphere=None)
         material=gs.materials.PBD.Cloth(stretch_compliance=1e-7, bending_compliance=args.bending,
                                         static_friction=0.6, kinetic_friction=0.6),
     )
-    cam = scene.add_camera(res=(640, 480), pos=(1.2, 1.1, 0.7), lookat=(0.45, 0.0, 0.15),
-                           fov=45, GUI=False)
+    if args.mode == "grasp":
+        cam = scene.add_camera(res=(640, 480), pos=(1.3, 1.1, 0.8), lookat=(0.35, 0.0, 0.45),
+                               fov=50, GUI=False)
+    else:
+        cam = scene.add_camera(res=(640, 480), pos=(1.2, 1.1, 0.7), lookat=(0.45, 0.0, 0.15),
+                               fov=45, GUI=False)
     scene.build()
     return scene, cloth, franka, cam
 
